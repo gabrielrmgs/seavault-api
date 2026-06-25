@@ -98,3 +98,18 @@ Task 14: complete (commit bf10f68; CourseResource REST endpoints; 5 tests green)
 Task 15: complete (full suite: 139 tests, 0 failures, 0 errors)
 
 PLAN 3b COMPLETE — documents, certificates, courses modules delivered: schemas V6/V7/V8, ExpiryStatus shared util, all three CRUDs (create/get/list/update/delete) with soft delete, expiry status (docs/certs), stored status (courses), file attachments via FileService, REST endpoints, suite green (139/0/0).
+
+# SeaVault Plano 3c — Vessels & Companies
+
+Branch: feat/vessels-companies
+Base: main after Plan 3b (139/0/0)
+
+Task 1: complete (V9__vessels.sql migration, Vessel entity, VesselRepository; 4 tests green)
+Task 2: complete (VesselRequest/VesselResponse DTOs, VesselService CRUD + optional type validation kind=VESSEL; 7 tests green)
+Task 3: complete (VesselResource REST endpoints; 6 tests green)
+Task 4: complete (V10__companies.sql migration, Company entity, CompanyRepository; 4 tests green)
+Task 5: complete (CompanyRequest/CompanyResponse DTOs, CompanyService CRUD + optional type validation kind=COMPANY; 7 tests green)
+Task 6: complete (CompanyResource REST endpoints; 7 tests green)
+Task 7: complete (full suite: 174 tests, 0 failures, 0 errors)
+
+PLAN 3c COMPLETE — vessels e companies entregues; suíte 174/0/0; Plano 3 (a+b+c) concluído.
