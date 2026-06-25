@@ -43,3 +43,6 @@ nb-configuration.xml
 /.quarkus/cli/plugins/
 # TLS Certificates
 .certs/
+
+# Chaves locais (gerar por ambiente; em prod usar secret/volume)
+src/main/resources/rsaPrivate.pem
