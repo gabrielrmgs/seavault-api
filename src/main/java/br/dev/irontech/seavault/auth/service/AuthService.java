@@ -2,16 +2,21 @@ package br.dev.irontech.seavault.auth.service;
 
 import br.dev.irontech.seavault.auth.domain.EmailToken;
 import br.dev.irontech.seavault.auth.domain.EmailTokenType;
+import br.dev.irontech.seavault.auth.domain.RefreshToken;
 import br.dev.irontech.seavault.auth.domain.User;
 import br.dev.irontech.seavault.auth.domain.UserPlan;
 import br.dev.irontech.seavault.auth.domain.UserRole;
 import br.dev.irontech.seavault.auth.domain.UserStatus;
+import br.dev.irontech.seavault.auth.dto.LoginRequest;
 import br.dev.irontech.seavault.auth.dto.RegisterRequest;
 import br.dev.irontech.seavault.auth.dto.RegisterResponse;
+import br.dev.irontech.seavault.auth.dto.TokenResponse;
 import br.dev.irontech.seavault.auth.repo.EmailTokenRepository;
+import br.dev.irontech.seavault.auth.repo.RefreshTokenRepository;
 import br.dev.irontech.seavault.auth.repo.UserRepository;
 import br.dev.irontech.seavault.common.error.BusinessException;
 import br.dev.irontech.seavault.common.error.ConflictException;
+import br.dev.irontech.seavault.common.error.UnauthorizedException;
 import br.dev.irontech.seavault.common.security.OpaqueTokens;
 import br.dev.irontech.seavault.notifications.EmailService;
 import io.quarkus.elytron.security.common.BcryptUtil;
@@ -21,6 +26,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 
 @ApplicationScoped
 public class AuthService {
@@ -28,6 +34,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final EmailTokenRepository emailTokenRepository;
     private final EmailService emailService;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final TokenService tokenService;
 
     @ConfigProperty(name = "seavault.auth.confirm-token-ttl-hours")
     long confirmTtlHours;
@@ -35,12 +43,19 @@ public class AuthService {
     @ConfigProperty(name = "seavault.app.base-url")
     String baseUrl;
 
+    @ConfigProperty(name = "seavault.jwt.refresh-ttl-days")
+    long refreshTtlDays;
+
     public AuthService(UserRepository userRepository,
                        EmailTokenRepository emailTokenRepository,
-                       EmailService emailService) {
+                       EmailService emailService,
+                       RefreshTokenRepository refreshTokenRepository,
+                       TokenService tokenService) {
         this.userRepository = userRepository;
         this.emailTokenRepository = emailTokenRepository;
         this.emailService = emailService;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.tokenService = tokenService;
     }
 
     @Transactional
@@ -79,5 +94,47 @@ public class AuthService {
         token.usedAt = Instant.now();
         User user = userRepository.findById(token.userId);
         user.emailVerified = true;
+    }
+
+    @Transactional
+    public TokenResponse login(LoginRequest req) {
+        User user = userRepository.findActiveByEmail(req.email())
+                .orElseThrow(() -> new UnauthorizedException("Credenciais inválidas"));
+        if (user.status != UserStatus.ATIVO
+                || !BcryptUtil.matches(req.password(), user.passwordHash)) {
+            throw new UnauthorizedException("Credenciais inválidas");
+        }
+        return issueTokens(user);
+    }
+
+    @Transactional
+    public TokenResponse refresh(String rawRefreshToken) {
+        RefreshToken current = refreshTokenRepository
+                .findValidByHash(OpaqueTokens.sha256(rawRefreshToken), Instant.now())
+                .orElseThrow(() -> new UnauthorizedException("Refresh token inválido"));
+        current.revokedAt = Instant.now();
+        User user = userRepository.findById(current.userId);
+        if (user == null || user.deletedAt != null || user.status != UserStatus.ATIVO) {
+            throw new UnauthorizedException("Usuário indisponível");
+        }
+        return issueTokens(user);
+    }
+
+    @Transactional
+    public void logout(String rawRefreshToken) {
+        Optional<RefreshToken> token =
+                refreshTokenRepository.findValidByHash(OpaqueTokens.sha256(rawRefreshToken), Instant.now());
+        token.ifPresent(t -> t.revokedAt = Instant.now());
+    }
+
+    private TokenResponse issueTokens(User user) {
+        String access = tokenService.issueAccessToken(user);
+        String rawRefresh = OpaqueTokens.generate();
+        RefreshToken rt = new RefreshToken();
+        rt.userId = user.id;
+        rt.tokenHash = OpaqueTokens.sha256(rawRefresh);
+        rt.expiresAt = Instant.now().plus(refreshTtlDays, ChronoUnit.DAYS);
+        refreshTokenRepository.persist(rt);
+        return new TokenResponse(access, rawRefresh, tokenService.accessTtlSeconds());
     }
 }
