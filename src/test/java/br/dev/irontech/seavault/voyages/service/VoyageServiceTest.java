@@ -131,6 +131,7 @@ class VoyageServiceTest {
 
         assertNull(updated.computedDays());
         assertNull(updated.overriddenAt());
+        assertNull(updated.overrideReason());
         assertEquals(10, updated.effectiveDays());
     }
 
