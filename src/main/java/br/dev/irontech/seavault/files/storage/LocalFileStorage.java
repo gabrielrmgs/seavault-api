@@ -43,6 +43,11 @@ public class LocalFileStorage implements FileStorage {
     }
 
     private Path resolve(String storageKey) {
-        return Path.of(baseDir).resolve(storageKey).normalize();
+        Path root = Path.of(baseDir).toAbsolutePath().normalize();
+        Path target = root.resolve(storageKey).normalize();
+        if (!target.startsWith(root)) {
+            throw new IllegalArgumentException("Chave de armazenamento invalida: " + storageKey);
+        }
+        return target;
     }
 }

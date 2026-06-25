@@ -4,9 +4,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LocalFileStorageTest {
@@ -41,5 +43,18 @@ class LocalFileStorageTest {
     void deleteOfMissingKeyIsNoOp(@TempDir Path dir) {
         LocalFileStorage storage = storageRootedAt(dir);
         storage.delete("user-1/never-existed");
+    }
+
+    @Test
+    void rejectsStorageKeyOutsideBaseDir(@TempDir Path dir) {
+        LocalFileStorage storage = storageRootedAt(dir);
+        String outsideName = "outside-storage-object-" + dir.getFileName();
+        Path outside = dir.getParent().resolve(outsideName);
+        assertFalse(Files.exists(outside));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> storage.store("../" + outsideName, new byte[]{9}));
+
+        assertFalse(Files.exists(outside));
     }
 }
