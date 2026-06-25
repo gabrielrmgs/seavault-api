@@ -36,6 +36,14 @@ public class ReferenceRepository implements PanacheRepositoryBase<ProfessionalGr
         return Optional.ofNullable(getEntityManager().find(Category.class, id));
     }
 
+    public Optional<RefType> findTypeById(UUID id) {
+        return Optional.ofNullable(getEntityManager().find(RefType.class, id));
+    }
+
+    public Optional<CourseCatalog> findCourseById(UUID id) {
+        return Optional.ofNullable(getEntityManager().find(CourseCatalog.class, id));
+    }
+
     public List<CourseCatalog> listCourses() {
         return getEntityManager()
                 .createQuery("from CourseCatalog order by name", CourseCatalog.class)
