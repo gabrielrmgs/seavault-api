@@ -45,4 +45,4 @@ nb-configuration.xml
 .certs/
 
 # Chaves locais (gerar por ambiente; em prod usar secret/volume)
-src/main/resources/rsaPrivate.pem
+src/main/resources/privateKey.pem

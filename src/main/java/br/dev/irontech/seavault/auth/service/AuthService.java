@@ -97,6 +97,9 @@ public class AuthService {
                 .orElseThrow(() -> new BusinessException("Token de confirmação inválido ou expirado"));
         token.usedAt = Instant.now();
         User user = userRepository.findById(token.userId);
+        if (user == null || user.deletedAt != null || user.status != UserStatus.ATIVO) {
+            throw new BusinessException("Usuário indisponível");
+        }
         user.emailVerified = true;
     }
 
@@ -155,6 +158,9 @@ public class AuthService {
                 .orElseThrow(() -> new BusinessException("Token de redefinição inválido ou expirado"));
         token.usedAt = Instant.now();
         User user = userRepository.findById(token.userId);
+        if (user == null || user.deletedAt != null || user.status != UserStatus.ATIVO) {
+            throw new BusinessException("Usuário indisponível");
+        }
         user.passwordHash = BcryptUtil.bcryptHash(req.newPassword());
         refreshTokenRepository.update("revokedAt = ?1 where userId = ?2 and revokedAt is null",
                 Instant.now(), user.id);
