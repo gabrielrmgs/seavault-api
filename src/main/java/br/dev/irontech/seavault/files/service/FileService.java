@@ -79,6 +79,10 @@ public class FileService {
         return new FileDownload(storage.read(f.storageKey), f.contentType, f.originalName);
     }
 
+    public FileResponse get(UUID userId, UUID fileId) {
+        return toResponse(requireOwned(userId, fileId));
+    }
+
     public PageResponse<FileResponse> list(UUID userId, PageRequest page) {
         List<FileResponse> content = fileRepository.listActiveByUser(userId, page).stream()
                 .map(this::toResponse)

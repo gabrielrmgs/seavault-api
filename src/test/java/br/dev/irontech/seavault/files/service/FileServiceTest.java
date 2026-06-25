@@ -90,6 +90,18 @@ class FileServiceTest {
     }
 
     @Test
+    void getReturnsMetadataForOwnedFile() {
+        UUID userId = newUser("svc-get@example.com");
+        FileResponse f = fileService.upload(userId, "meta.pdf", "application/pdf", pdf("m"));
+
+        FileResponse found = fileService.get(userId, f.id());
+
+        assertEquals(f.id(), found.id());
+        assertEquals("meta.pdf", found.originalName());
+        assertEquals("application/pdf", found.contentType());
+    }
+
+    @Test
     void downloadOfAnotherUsersFileReturns404() {
         UUID a = newUser("svc-iso-a@example.com");
         UUID b = newUser("svc-iso-b@example.com");
