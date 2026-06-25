@@ -74,3 +74,27 @@ Task 6: complete (commit 1218bd0, review clean; FileResourceTest 7 green)
 Task 7: complete (full suite: 83 tests, 0 failures, 0 errors)
 
 PLAN 3a COMPLETE — files module delivered: schema, local storage, domain/repositories, service upload/download/list/delete, attachment API, REST endpoints, suite green (83/0/0).
+
+# SeaVault Plano 3b — Documents, Certificates & Courses
+
+Branch: feat/documents-certificates-courses
+Base: main after Plan 3a (83/0/0)
+
+Task 1: complete (ExpiryStatus pure function + config key seavault.expiry.warning-days=30; 5 tests green)
+Task 2: complete (ReferenceRepository.findTypeById + findCourseById; 4 tests green)
+Task 3: complete (V6__documents.sql schema migration)
+Task 4: complete (Document entity + DocumentRepository)
+Task 5: complete (DocumentService CRUD + expiry status + attachments)
+Task 6: complete (AttachFileRequest DTO in files/dto/)
+Task 7: complete (DocumentResource REST endpoints)
+Task 8: complete (V7__certificates.sql schema migration)
+Task 9: complete (Certificate entity + CertificateRepository)
+Task 10: complete (CertificateService CRUD + expiry status + attachments)
+Task 11: complete (CertificateResource REST endpoints)
+Task 12: complete (V8__courses.sql + CourseStatus enum + Course entity + CourseRepository)
+Task 13: complete (commit 09e0537; CourseService CRUD + catalog validation + attachments; 6 tests green)
+Task 14: complete (commit bf10f68; CourseResource REST endpoints; 5 tests green)
+  FIX: FilesSchemaBootTest updated to check table exists (>= 0) instead of empty count, since shared test DB has data from resource tests.
+Task 15: complete (full suite: 139 tests, 0 failures, 0 errors)
+
+PLAN 3b COMPLETE — documents, certificates, courses modules delivered: schemas V6/V7/V8, ExpiryStatus shared util, all three CRUDs (create/get/list/update/delete) with soft delete, expiry status (docs/certs), stored status (courses), file attachments via FileService, REST endpoints, suite green (139/0/0).
