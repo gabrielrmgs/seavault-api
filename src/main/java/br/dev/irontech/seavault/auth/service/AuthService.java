@@ -8,6 +8,7 @@ import br.dev.irontech.seavault.auth.domain.UserPlan;
 import br.dev.irontech.seavault.auth.domain.UserRole;
 import br.dev.irontech.seavault.auth.domain.UserStatus;
 import br.dev.irontech.seavault.auth.dto.LoginRequest;
+import br.dev.irontech.seavault.auth.dto.PasswordResetConfirm;
 import br.dev.irontech.seavault.auth.dto.RegisterRequest;
 import br.dev.irontech.seavault.auth.dto.RegisterResponse;
 import br.dev.irontech.seavault.auth.dto.TokenResponse;
@@ -39,6 +40,9 @@ public class AuthService {
 
     @ConfigProperty(name = "seavault.auth.confirm-token-ttl-hours")
     long confirmTtlHours;
+
+    @ConfigProperty(name = "seavault.auth.reset-token-ttl-hours")
+    long resetTtlHours;
 
     @ConfigProperty(name = "seavault.app.base-url")
     String baseUrl;
@@ -125,6 +129,35 @@ public class AuthService {
         Optional<RefreshToken> token =
                 refreshTokenRepository.findValidByHash(OpaqueTokens.sha256(rawRefreshToken), Instant.now());
         token.ifPresent(t -> t.revokedAt = Instant.now());
+    }
+
+    @Transactional
+    public void requestPasswordReset(String email) {
+        Optional<User> maybeUser = userRepository.findActiveByEmail(email);
+        if (maybeUser.isEmpty()) {
+            return; // silencioso: não revela existência do e-mail
+        }
+        User user = maybeUser.get();
+        String raw = OpaqueTokens.generate();
+        EmailToken token = new EmailToken();
+        token.userId = user.id;
+        token.type = EmailTokenType.RESET;
+        token.tokenHash = OpaqueTokens.sha256(raw);
+        token.expiresAt = Instant.now().plus(resetTtlHours, ChronoUnit.HOURS);
+        emailTokenRepository.persist(token);
+        emailService.sendPasswordReset(user.email, baseUrl + "/api/auth/reset-password?token=" + raw);
+    }
+
+    @Transactional
+    public void resetPassword(PasswordResetConfirm req) {
+        EmailToken token = emailTokenRepository
+                .findValidByHash(OpaqueTokens.sha256(req.token()), EmailTokenType.RESET, Instant.now())
+                .orElseThrow(() -> new BusinessException("Token de redefinição inválido ou expirado"));
+        token.usedAt = Instant.now();
+        User user = userRepository.findById(token.userId);
+        user.passwordHash = BcryptUtil.bcryptHash(req.newPassword());
+        refreshTokenRepository.update("revokedAt = ?1 where userId = ?2 and revokedAt is null",
+                Instant.now(), user.id);
     }
 
     private TokenResponse issueTokens(User user) {
