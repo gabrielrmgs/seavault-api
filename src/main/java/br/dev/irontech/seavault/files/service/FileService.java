@@ -5,6 +5,7 @@ import br.dev.irontech.seavault.common.error.NotFoundException;
 import br.dev.irontech.seavault.common.page.PageRequest;
 import br.dev.irontech.seavault.common.page.PageResponse;
 import br.dev.irontech.seavault.files.domain.FileLink;
+import br.dev.irontech.seavault.files.domain.OwnerType;
 import br.dev.irontech.seavault.files.domain.StoredFile;
 import br.dev.irontech.seavault.files.dto.FileDownload;
 import br.dev.irontech.seavault.files.dto.FileResponse;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -99,6 +101,42 @@ public class FileService {
         }
         f.deletedAt = now;
         storage.delete(f.storageKey);
+    }
+
+    @Transactional
+    public void link(UUID userId, UUID fileId, OwnerType ownerType, UUID ownerId) {
+        requireOwned(userId, fileId);
+        if (fileLinkRepository.findActive(fileId, ownerType, ownerId).isPresent()) {
+            return;
+        }
+        FileLink link = new FileLink();
+        link.fileId = fileId;
+        link.ownerType = ownerType;
+        link.ownerId = ownerId;
+        fileLinkRepository.persist(link);
+    }
+
+    @Transactional
+    public void unlink(UUID userId, UUID fileId, OwnerType ownerType, UUID ownerId) {
+        requireOwned(userId, fileId);
+        fileLinkRepository.findActive(fileId, ownerType, ownerId)
+                .ifPresent(l -> l.deletedAt = Instant.now());
+    }
+
+    @Transactional
+    public void unlinkAll(OwnerType ownerType, UUID ownerId) {
+        Instant now = Instant.now();
+        for (FileLink link : fileLinkRepository.listActiveByOwner(ownerType, ownerId)) {
+            link.deletedAt = now;
+        }
+    }
+
+    public List<FileResponse> filesForOwner(UUID userId, OwnerType ownerType, UUID ownerId) {
+        return fileLinkRepository.listActiveByOwner(ownerType, ownerId).stream()
+                .map(l -> fileRepository.findActiveByIdAndUser(l.fileId, userId).orElse(null))
+                .filter(Objects::nonNull)
+                .map(this::toResponse)
+                .toList();
     }
 
     StoredFile requireOwned(UUID userId, UUID fileId) {
