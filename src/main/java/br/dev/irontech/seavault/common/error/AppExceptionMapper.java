@@ -5,7 +5,6 @@ import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 
 import java.time.Instant;
-import java.util.List;
 
 @Provider
 public class AppExceptionMapper implements ExceptionMapper<AppException> {
@@ -17,7 +16,7 @@ public class AppExceptionMapper implements ExceptionMapper<AppException> {
                 ex.status(),
                 ex.code(),
                 ex.getMessage(),
-                List.of()
+                ex.fieldErrors()
         );
         return Response.status(ex.status()).entity(body).build();
     }
