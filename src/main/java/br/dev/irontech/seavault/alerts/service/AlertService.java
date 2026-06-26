@@ -4,9 +4,14 @@ import br.dev.irontech.seavault.alerts.domain.Alert;
 import br.dev.irontech.seavault.alerts.domain.AlertSource;
 import br.dev.irontech.seavault.alerts.domain.AlertStatus;
 import br.dev.irontech.seavault.alerts.domain.AlertType;
+import br.dev.irontech.seavault.alerts.dto.AlertResponse;
 import br.dev.irontech.seavault.alerts.repo.AlertRepository;
 import br.dev.irontech.seavault.auth.repo.UserRepository;
 import br.dev.irontech.seavault.certificates.service.CertificateService;
+import br.dev.irontech.seavault.common.error.BadRequestException;
+import br.dev.irontech.seavault.common.error.NotFoundException;
+import br.dev.irontech.seavault.common.page.PageRequest;
+import br.dev.irontech.seavault.common.page.PageResponse;
 import br.dev.irontech.seavault.common.scan.DueItem;
 import br.dev.irontech.seavault.courses.service.CourseService;
 import br.dev.irontech.seavault.documents.service.DocumentService;
@@ -60,6 +65,42 @@ public class AlertService {
         this.voyageService = voyageService;
         this.emailService = emailService;
         this.userRepository = userRepository;
+    }
+
+    public PageResponse<AlertResponse> list(UUID userId, AlertStatus status, PageRequest page) {
+        List<Alert> rows = (status == null)
+                ? alertRepository.listByUser(userId, page)
+                : alertRepository.listByUserAndStatus(userId, status, page);
+        long total = (status == null)
+                ? alertRepository.countByUser(userId)
+                : alertRepository.countByUserAndStatus(userId, status);
+        return PageResponse.of(rows.stream().map(AlertService::toResponse).toList(), page, total);
+    }
+
+    @Transactional
+    public AlertResponse changeStatus(UUID userId, UUID id, AlertStatus status) {
+        if (status == AlertStatus.PENDENTE) {
+            throw new BadRequestException("Status inválido para alteração manual: PENDENTE");
+        }
+        Alert a = alertRepository.findByIdAndUser(id, userId)
+                .orElseThrow(() -> new NotFoundException("Alerta nao encontrado: " + id));
+        a.status = status;
+        if (status == AlertStatus.RESOLVIDO) {
+            a.resolvedAt = Instant.now();
+        }
+        return toResponse(a);
+    }
+
+    public List<AlertResponse> upcoming(UUID userId, int limit) {
+        return alertRepository.listPendingByUser(userId).stream()
+                .limit(limit)
+                .map(AlertService::toResponse)
+                .toList();
+    }
+
+    private static AlertResponse toResponse(Alert a) {
+        return new AlertResponse(a.id, a.source, a.sourceId, a.type, a.title,
+                a.dueDate, a.leadDays, a.status, a.createdAt, a.updatedAt);
     }
 
     @Transactional
