@@ -3,6 +3,7 @@ package br.dev.irontech.seavault.courses.service;
 import br.dev.irontech.seavault.common.error.NotFoundException;
 import br.dev.irontech.seavault.common.page.PageRequest;
 import br.dev.irontech.seavault.common.page.PageResponse;
+import br.dev.irontech.seavault.common.scan.DueItem;
 import br.dev.irontech.seavault.courses.domain.Course;
 import br.dev.irontech.seavault.courses.domain.CourseStatus;
 import br.dev.irontech.seavault.courses.dto.CourseRequest;
@@ -16,6 +17,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -85,6 +87,18 @@ public class CourseService {
     public List<FileResponse> listFiles(UUID userId, UUID id) {
         requireOwned(userId, id);
         return fileService.filesForOwner(userId, OwnerType.COURSE, id);
+    }
+
+    public List<DueItem> dueForAlerts(LocalDate maxDate) {
+        return courseRepository.listPlannedStartingAllUsers(maxDate).stream()
+                .map(c -> new DueItem(c.userId, c.id, c.startDate, "Início de curso: " + c.name))
+                .toList();
+    }
+
+    public List<CourseResponse> listAllForUser(UUID userId) {
+        return courseRepository.listAllActiveByUser(userId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     private void apply(Course c, CourseRequest req) {

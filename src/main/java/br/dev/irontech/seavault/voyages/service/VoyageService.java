@@ -2,6 +2,7 @@ package br.dev.irontech.seavault.voyages.service;
 
 import br.dev.irontech.seavault.common.error.BusinessException;
 import br.dev.irontech.seavault.common.error.NotFoundException;
+import br.dev.irontech.seavault.common.scan.DueItem;
 import br.dev.irontech.seavault.common.page.PageRequest;
 import br.dev.irontech.seavault.common.page.PageResponse;
 import br.dev.irontech.seavault.companies.service.CompanyService;
@@ -69,6 +70,12 @@ public class VoyageService {
     public List<VoyageResponse> listAllForUser(UUID userId) {
         return voyageRepository.listAllActiveByUser(userId).stream()
                 .map(this::toResponse)
+                .toList();
+    }
+
+    public List<DueItem> dueForAlerts(LocalDate cutoff) {
+        return voyageRepository.listActiveEmbarkedBeforeAllUsers(cutoff).stream()
+                .map(v -> new DueItem(v.userId, v.id, v.embarkDate, "Embarque ativo desde " + v.embarkDate))
                 .toList();
     }
 

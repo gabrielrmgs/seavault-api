@@ -6,6 +6,7 @@ import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,5 +26,13 @@ public class DocumentRepository implements PanacheRepositoryBase<Document, UUID>
 
     public long countActiveByUser(UUID userId) {
         return count("userId = ?1 and deletedAt is null", userId);
+    }
+
+    public List<Document> listExpiringAllUsers(LocalDate maxDate) {
+        return find("expiryDate is not null and expiryDate <= ?1 and deletedAt is null", maxDate).list();
+    }
+
+    public List<Document> listAllActiveByUser(UUID userId) {
+        return find("userId = ?1 and deletedAt is null", Sort.by("createdAt").descending(), userId).list();
     }
 }

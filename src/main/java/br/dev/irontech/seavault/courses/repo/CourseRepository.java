@@ -7,6 +7,7 @@ import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,5 +31,14 @@ public class CourseRepository implements PanacheRepositoryBase<Course, UUID> {
 
     public List<Course> listCompletedByUser(UUID userId) {
         return find("userId = ?1 and deletedAt is null and status = ?2", userId, CourseStatus.CONCLUIDO).list();
+    }
+
+    public List<Course> listPlannedStartingAllUsers(LocalDate maxDate) {
+        return find("status = ?1 and startDate is not null and startDate <= ?2 and deletedAt is null",
+                CourseStatus.PLANEJADO, maxDate).list();
+    }
+
+    public List<Course> listAllActiveByUser(UUID userId) {
+        return find("userId = ?1 and deletedAt is null", Sort.by("createdAt").descending(), userId).list();
     }
 }

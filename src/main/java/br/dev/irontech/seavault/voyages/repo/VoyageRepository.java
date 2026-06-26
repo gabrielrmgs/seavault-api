@@ -6,6 +6,7 @@ import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,5 +30,9 @@ public class VoyageRepository implements PanacheRepositoryBase<Voyage, UUID> {
 
     public List<Voyage> listAllActiveByUser(UUID userId) {
         return find("userId = ?1 and deletedAt is null", Sort.by("embarkDate").descending(), userId).list();
+    }
+
+    public List<Voyage> listActiveEmbarkedBeforeAllUsers(LocalDate cutoff) {
+        return find("disembarkDate is null and embarkDate <= ?1 and deletedAt is null", cutoff).list();
     }
 }

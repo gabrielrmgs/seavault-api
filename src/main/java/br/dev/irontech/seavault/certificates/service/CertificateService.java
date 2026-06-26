@@ -5,6 +5,7 @@ import br.dev.irontech.seavault.certificates.dto.CertificateRequest;
 import br.dev.irontech.seavault.certificates.dto.CertificateResponse;
 import br.dev.irontech.seavault.certificates.repo.CertificateRepository;
 import br.dev.irontech.seavault.common.error.NotFoundException;
+import br.dev.irontech.seavault.common.scan.DueItem;
 import br.dev.irontech.seavault.common.expiry.ExpiryStatus;
 import br.dev.irontech.seavault.common.page.PageRequest;
 import br.dev.irontech.seavault.common.page.PageResponse;
@@ -83,6 +84,18 @@ public class CertificateService {
     public List<FileResponse> listFiles(UUID userId, UUID id) {
         requireOwned(userId, id);
         return fileService.filesForOwner(userId, OwnerType.CERTIFICATE, id);
+    }
+
+    public List<DueItem> dueForAlerts(LocalDate maxDate) {
+        return certificateRepository.listExpiringAllUsers(maxDate).stream()
+                .map(c -> new DueItem(c.userId, c.id, c.expiryDate, "Vencimento de certificado: " + c.name))
+                .toList();
+    }
+
+    public List<CertificateResponse> listAllForUser(UUID userId) {
+        return certificateRepository.listAllActiveByUser(userId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     private void apply(Certificate c, CertificateRequest req) {

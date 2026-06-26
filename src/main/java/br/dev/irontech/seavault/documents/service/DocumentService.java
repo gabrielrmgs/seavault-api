@@ -1,6 +1,7 @@
 package br.dev.irontech.seavault.documents.service;
 
 import br.dev.irontech.seavault.common.error.NotFoundException;
+import br.dev.irontech.seavault.common.scan.DueItem;
 import br.dev.irontech.seavault.common.expiry.ExpiryStatus;
 import br.dev.irontech.seavault.common.page.PageRequest;
 import br.dev.irontech.seavault.common.page.PageResponse;
@@ -90,6 +91,19 @@ public class DocumentService {
     public List<FileResponse> listFiles(UUID userId, UUID id) {
         requireOwned(userId, id);
         return fileService.filesForOwner(userId, OwnerType.DOCUMENT, id);
+    }
+
+    public List<DueItem> dueForAlerts(LocalDate maxDate) {
+        return documentRepository.listExpiringAllUsers(maxDate).stream()
+                .map(d -> new DueItem(d.userId, d.id, d.expiryDate,
+                        "Vencimento de documento" + (d.number != null ? " " + d.number : "")))
+                .toList();
+    }
+
+    public List<DocumentResponse> listAllForUser(UUID userId) {
+        return documentRepository.listAllActiveByUser(userId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     private void apply(Document d, DocumentRequest req) {
