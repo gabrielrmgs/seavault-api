@@ -4,14 +4,11 @@ import br.dev.irontech.seavault.certificates.dto.CertificateResponse;
 import br.dev.irontech.seavault.certificates.service.CertificateService;
 import br.dev.irontech.seavault.courses.dto.CourseResponse;
 import br.dev.irontech.seavault.courses.service.CourseService;
-import br.dev.irontech.seavault.common.error.NotFoundException;
-import br.dev.irontech.seavault.companies.service.CompanyService;
 import br.dev.irontech.seavault.documents.dto.DocumentResponse;
 import br.dev.irontech.seavault.documents.service.DocumentService;
 import br.dev.irontech.seavault.profile.dto.ProfileResponse;
 import br.dev.irontech.seavault.profile.service.ProfileService;
 import br.dev.irontech.seavault.auth.repo.UserRepository;
-import br.dev.irontech.seavault.reference.repo.ReferenceRepository;
 import br.dev.irontech.seavault.reports.domain.ReportFormat;
 import br.dev.irontech.seavault.reports.domain.ReportRecord;
 import br.dev.irontech.seavault.reports.domain.ReportType;
@@ -24,14 +21,12 @@ import br.dev.irontech.seavault.reports.pdf.ReportDocument.Table;
 import br.dev.irontech.seavault.reports.repo.ReportHistoryRepository;
 import br.dev.irontech.seavault.seatime.dto.SeatimeSummaryResponse;
 import br.dev.irontech.seavault.seatime.service.SeatimeService;
-import br.dev.irontech.seavault.vessels.service.VesselService;
 import br.dev.irontech.seavault.voyages.dto.VoyageResponse;
 import br.dev.irontech.seavault.voyages.service.VoyageService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -41,38 +36,32 @@ public class ReportService {
 
     private final DocumentService documentService;
     private final CertificateService certificateService;
-    private final ReferenceRepository referenceRepository;
     private final ReportHistoryRepository reportHistoryRepository;
     private final SeatimeService seatimeService;
     private final VoyageService voyageService;
-    private final VesselService vesselService;
-    private final CompanyService companyService;
     private final ProfileService profileService;
     private final UserRepository userRepository;
     private final CourseService courseService;
+    private final ReportNames names;
 
     public ReportService(DocumentService documentService,
                          CertificateService certificateService,
-                         ReferenceRepository referenceRepository,
                          ReportHistoryRepository reportHistoryRepository,
                          SeatimeService seatimeService,
                          VoyageService voyageService,
-                         VesselService vesselService,
-                         CompanyService companyService,
                          ProfileService profileService,
                          UserRepository userRepository,
-                         CourseService courseService) {
+                         CourseService courseService,
+                         ReportNames names) {
         this.documentService = documentService;
         this.certificateService = certificateService;
-        this.referenceRepository = referenceRepository;
         this.reportHistoryRepository = reportHistoryRepository;
         this.seatimeService = seatimeService;
         this.voyageService = voyageService;
-        this.vesselService = vesselService;
-        this.companyService = companyService;
         this.profileService = profileService;
         this.userRepository = userRepository;
         this.courseService = courseService;
+        this.names = names;
     }
 
     @Transactional
@@ -99,15 +88,15 @@ public class ReportService {
         List<DocumentResponse> docs = documentService.listAllForUser(userId);
         List<List<String>> rows = docs.stream()
                 .map(d -> List.of(
-                        typeLabel(d.typeId()),
-                        nz(d.number()),
-                        nz(d.issuer()),
-                        dateStr(d.expiryDate()),
+                        names.typeLabel(d.typeId()),
+                        ReportNames.nz(d.number()),
+                        ReportNames.nz(d.issuer()),
+                        ReportNames.dateStr(d.expiryDate()),
                         d.status().name()))
                 .toList();
         Section section = new Section(
                 "Documentos",
-                List.of(new Field("Total", str(docs.size()))),
+                List.of(new Field("Total", ReportNames.str(docs.size()))),
                 new Table(List.of("Tipo", "Número", "Emissor", "Validade", "Status"), rows));
         return new ReportDocument("DOCUMENTS", "Relatório de Documentos", now, List.of(section));
     }
@@ -116,15 +105,15 @@ public class ReportService {
         List<CertificateResponse> certs = certificateService.listAllForUser(userId);
         List<List<String>> rows = certs.stream()
                 .map(c -> List.of(
-                        nz(c.name()),
-                        nz(c.code()),
-                        nz(c.institution()),
-                        dateStr(c.expiryDate()),
+                        ReportNames.nz(c.name()),
+                        ReportNames.nz(c.code()),
+                        ReportNames.nz(c.institution()),
+                        ReportNames.dateStr(c.expiryDate()),
                         c.status().name()))
                 .toList();
         Section section = new Section(
                 "Certificados",
-                List.of(new Field("Total", str(certs.size()))),
+                List.of(new Field("Total", ReportNames.str(certs.size()))),
                 new Table(List.of("Nome", "Código", "Instituição", "Validade", "Status"), rows));
         return new ReportDocument("CERTIFICATES", "Relatório de Certificados", now, List.of(section));
     }
@@ -146,31 +135,31 @@ public class ReportService {
 
         if (options.wants("totals")) {
             sections.add(new Section("Totais", List.of(
-                    new Field("Total de dias", str(st.totalDays())),
-                    new Field("Dias (embarque ativo)", str(st.activeDays())),
-                    new Field("Últimos 12 meses", str(st.last12MonthsDays())),
-                    new Field("Últimos 5 anos", str(st.last5YearsDays())),
+                    new Field("Total de dias", ReportNames.str(st.totalDays())),
+                    new Field("Dias (embarque ativo)", ReportNames.str(st.activeDays())),
+                    new Field("Últimos 12 meses", ReportNames.str(st.last12MonthsDays())),
+                    new Field("Últimos 5 anos", ReportNames.str(st.last5YearsDays())),
                     new Field("Maior contrato (dias)",
-                            st.longestContractDays() == null ? "—" : str(st.longestContractDays()))),
+                            st.longestContractDays() == null ? "—" : ReportNames.str(st.longestContractDays()))),
                     null));
         }
         if (options.wants("byCompany")) {
             List<List<String>> rows = st.byCompany().stream()
-                    .map(e -> List.of(companyName(userId, e.id()), str(e.days())))
+                    .map(e -> List.of(names.companyName(userId, e.id()), ReportNames.str(e.days())))
                     .toList();
             sections.add(new Section("Por empresa", List.of(),
                     new Table(List.of("Empresa", "Dias"), rows)));
         }
         if (options.wants("byVessel")) {
             List<List<String>> rows = st.byVessel().stream()
-                    .map(e -> List.of(vesselName(userId, e.id()), str(e.days())))
+                    .map(e -> List.of(names.vesselName(userId, e.id()), ReportNames.str(e.days())))
                     .toList();
             sections.add(new Section("Por embarcação", List.of(),
                     new Table(List.of("Embarcação", "Dias"), rows)));
         }
         if (options.wants("byYear")) {
             List<List<String>> rows = st.byYear().stream()
-                    .map(e -> List.of(str(e.year()), str(e.days())))
+                    .map(e -> List.of(ReportNames.str(e.year()), ReportNames.str(e.days())))
                     .toList();
             sections.add(new Section("Por ano", List.of(),
                     new Table(List.of("Ano", "Dias"), rows)));
@@ -185,13 +174,13 @@ public class ReportService {
             ProfileResponse p = profileService.getOrCreate(userId);
             String userName = userRepository.findByIdOptional(userId).map(u -> u.name).orElse("—");
             List<Field> fields = new ArrayList<>();
-            fields.add(new Field("Nome", nz(userName)));
-            fields.add(new Field("CIR", nz(p.cir())));
-            fields.add(new Field("Nacionalidade", nz(p.nationality())));
-            fields.add(new Field("Categoria", categoryName(p.categoryId())));
+            fields.add(new Field("Nome", ReportNames.nz(userName)));
+            fields.add(new Field("CIR", ReportNames.nz(p.cir())));
+            fields.add(new Field("Nacionalidade", ReportNames.nz(p.nationality())));
+            fields.add(new Field("Categoria", names.categoryName(p.categoryId())));
             if (options.includeSensitive()) {
-                fields.add(new Field("CPF", nz(p.cpf())));
-                fields.add(new Field("RG", nz(p.rg())));
+                fields.add(new Field("CPF", ReportNames.nz(p.cpf())));
+                fields.add(new Field("RG", ReportNames.nz(p.rg())));
             }
             sections.add(new Section("Perfil", fields, null));
         }
@@ -199,8 +188,8 @@ public class ReportService {
         if (options.wants("seatime")) {
             SeatimeSummaryResponse st = seatimeService.summary(userId);
             sections.add(new Section("Tempo de mar", List.of(
-                    new Field("Total de dias", str(st.totalDays())),
-                    new Field("Últimos 12 meses", str(st.last12MonthsDays()))),
+                    new Field("Total de dias", ReportNames.str(st.totalDays())),
+                    new Field("Últimos 12 meses", ReportNames.str(st.last12MonthsDays()))),
                     null));
         }
 
@@ -208,13 +197,13 @@ public class ReportService {
             List<VoyageResponse> voyages = voyageService.listAllForUser(userId);
             List<List<String>> rows = voyages.stream()
                     .map(v -> List.of(
-                            vesselName(userId, v.vesselId()),
-                            companyName(userId, v.companyId()),
-                            nz(v.role()),
-                            dateStr(v.embarkDate()),
-                            dateStr(v.disembarkDate()),
-                            v.effectiveDays() == null ? "—" : str(v.effectiveDays()),
-                            nz(v.status())))
+                            names.vesselName(userId, v.vesselId()),
+                            names.companyName(userId, v.companyId()),
+                            ReportNames.nz(v.role()),
+                            ReportNames.dateStr(v.embarkDate()),
+                            ReportNames.dateStr(v.disembarkDate()),
+                            v.effectiveDays() == null ? "—" : ReportNames.str(v.effectiveDays()),
+                            ReportNames.nz(v.status())))
                     .toList();
             sections.add(new Section("Embarques", List.of(),
                     new Table(List.of("Embarcação", "Empresa", "Função", "Embarque", "Desembarque", "Dias", "Status"),
@@ -231,13 +220,13 @@ public class ReportService {
             ProfileResponse p = profileService.getOrCreate(userId);
             String userName = userRepository.findByIdOptional(userId).map(u -> u.name).orElse("—");
             List<Field> fields = new ArrayList<>();
-            fields.add(new Field("Nome", nz(userName)));
-            fields.add(new Field("Nacionalidade", nz(p.nationality())));
-            fields.add(new Field("Categoria", categoryName(p.categoryId())));
-            fields.add(new Field("CIR", nz(p.cir())));
+            fields.add(new Field("Nome", ReportNames.nz(userName)));
+            fields.add(new Field("Nacionalidade", ReportNames.nz(p.nationality())));
+            fields.add(new Field("Categoria", names.categoryName(p.categoryId())));
+            fields.add(new Field("CIR", ReportNames.nz(p.cir())));
             if (options.includeSensitive()) {
-                fields.add(new Field("CPF", nz(p.cpf())));
-                fields.add(new Field("RG", nz(p.rg())));
+                fields.add(new Field("CPF", ReportNames.nz(p.cpf())));
+                fields.add(new Field("RG", ReportNames.nz(p.rg())));
             }
             sections.add(new Section("Perfil", fields, null));
         }
@@ -245,7 +234,8 @@ public class ReportService {
         if (options.wants("certificates")) {
             List<CertificateResponse> certs = certificateService.listAllForUser(userId);
             List<List<String>> rows = certs.stream()
-                    .map(c -> List.of(nz(c.name()), nz(c.institution()), dateStr(c.expiryDate()), c.status().name()))
+                    .map(c -> List.of(ReportNames.nz(c.name()), ReportNames.nz(c.institution()),
+                            ReportNames.dateStr(c.expiryDate()), c.status().name()))
                     .toList();
             sections.add(new Section("Certificados", List.of(),
                     new Table(List.of("Nome", "Instituição", "Validade", "Status"), rows)));
@@ -255,9 +245,9 @@ public class ReportService {
             List<CourseResponse> courses = courseService.listAllForUser(userId);
             List<List<String>> rows = courses.stream()
                     .map(c -> List.of(
-                            nz(c.name()),
-                            nz(c.institution()),
-                            c.workloadHours() == null ? "—" : str(c.workloadHours()),
+                            ReportNames.nz(c.name()),
+                            ReportNames.nz(c.institution()),
+                            c.workloadHours() == null ? "—" : ReportNames.str(c.workloadHours()),
                             c.status().name()))
                     .toList();
             sections.add(new Section("Cursos", List.of(),
@@ -267,62 +257,13 @@ public class ReportService {
         if (options.wants("seatime")) {
             SeatimeSummaryResponse st = seatimeService.summary(userId);
             sections.add(new Section("Tempo de mar", List.of(
-                    new Field("Total de dias", str(st.totalDays())),
+                    new Field("Total de dias", ReportNames.str(st.totalDays())),
                     new Field("Maior contrato (dias)",
-                            st.longestContractDays() == null ? "—" : str(st.longestContractDays()))),
+                            st.longestContractDays() == null ? "—" : ReportNames.str(st.longestContractDays()))),
                     null));
         }
 
         return new ReportDocument("CV", "Currículo Marítimo", now, sections);
     }
 
-    String vesselName(UUID userId, UUID id) {
-        if (id == null) {
-            return "—";
-        }
-        try {
-            return vesselService.get(userId, id).name();
-        } catch (NotFoundException e) {
-            return "—";
-        }
-    }
-
-    String companyName(UUID userId, UUID id) {
-        if (id == null) {
-            return "—";
-        }
-        try {
-            return companyService.get(userId, id).name();
-        } catch (NotFoundException e) {
-            return "—";
-        }
-    }
-
-    String categoryName(UUID id) {
-        if (id == null) {
-            return "—";
-        }
-        return referenceRepository.findCategoryById(id).map(c -> c.name).orElse("—");
-    }
-
-    // ---- helpers reusados pelas Tasks 4 e 5 ----
-
-    String typeLabel(UUID typeId) {
-        if (typeId == null) {
-            return "—";
-        }
-        return referenceRepository.findTypeById(typeId).map(t -> t.label).orElse("—");
-    }
-
-    static String nz(String s) {
-        return s == null || s.isBlank() ? "—" : s;
-    }
-
-    static String dateStr(LocalDate d) {
-        return d == null ? "—" : d.toString();
-    }
-
-    static String str(long n) {
-        return String.valueOf(n);
-    }
 }
