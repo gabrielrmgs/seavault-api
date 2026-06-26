@@ -113,3 +113,26 @@ Task 6: complete (CompanyResource REST endpoints; 7 tests green)
 Task 7: complete (full suite: 174 tests, 0 failures, 0 errors)
 
 PLAN 3c COMPLETE — vessels e companies entregues; suíte 174/0/0; Plano 3 (a+b+c) concluído.
+
+# SeaVault Plano 4 — Embarques & Tempo de Mar (voyages + seatime)
+
+Branch: feat/voyages-seatime
+Base: 5165ac5 (main after Plan 3c, 174/0/0)
+
+Task 1: complete (commits 5165ac5..2916b59, review clean) — V11 seed ref_types kind NAVIGATION (4 tipos); NavigationTypesSeedTest 1 green
+Task 2: complete (commits 2916b59..7beb880, review approved) — V12 voyages schema, Voyage entity (19 fields), VoyageStatus enum, VoyageRepository; 4 tests green
+  MINOR: list/count/listAll lack cross-user isolation + soft-delete assertions (only findActiveByIdAndUser covers them); bare @Column on role/notes (segue convenção Vessel) — triage no review final
+Task 3: complete (commits 7beb880..3968f44, review approved + 1 fix) — VoyageRequest/VoyageResponse DTOs, VoyageService (CRUD, dias inclusivos, override replace-all, validação FKs por posse/kind, anexos); 11 tests green
+  FIX (Important #2): teste updateReplaceAllClearsOverrideWhenOmitted agora asserta overrideReason() null (commit 3968f44)
+  ADJUDICADO (Important #1): get/list sem @Transactional MANTIDO — Voyage só tem campos escalares (sem lazy), e espelha VesselService/CompanyService/DocumentService; anotar só voyages quebraria consistência. Confirmar no review final.
+  MINOR: faltam testes p/ disembark==embark (1 dia) e p/ unlinkAll no delete; effectiveDays de ACTIVE com embark futuro pode dar valor negativo (sem guard) — triage no review final
+Task 4: complete (commits 3968f44..42c5670, review approved) — VoyageResource REST (5 CRUD + 3 anexos), thin delegation; 8 e2e tests green
+  MINOR: anyNavigationTypeId() sem fallback notNullValue se seed vazio; datas hard-coded 2024 nos helpers de teste — triage no review final
+Task 5: complete (commits 42c5670..3f12b26, review approved) — SeatimeSummaryResponse (5 records aninhados) + SeatimeService (totais/breakdowns/janelas/warnings, depende só de VoyageService); 4 tests green
+  ADJUDICADO (Important #1/#2): NPE em byYear/lastVoyage por embarkDate null — IMPOSSÍVEL (embarkDate @NotNull no DTO + NOT NULL na coluna); não adicionar guarda p/ estado impossível (YAGNI).
+  MINOR (Important #3 rebaixado): warning "Multiplos" sem acento (bate com brief; corrigir acentos de warnings em lote no review final); faltam testes p/ last12m/last5y, overlap FINISHED-vs-FINISHED, daysSinceLastDisembark, lastVoyage — triage no review final
+Task 6: complete (commits 3f12b26..9ea7dd1, review clean) — SeatimeResource REST GET /api/seatime autenticado; 2 e2e tests green
+Task 7: complete (full suite: 204 tests, 0 failures, 0 errors)
+  NOTE: plano estimava 205 testes, mas a suíte real reporta 204; VoyageServiceTest possui 11 testes (não 12).
+
+PLAN 4 COMPLETE — voyages e seatime entregues; suíte 204/0/0.
