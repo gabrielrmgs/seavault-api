@@ -7,7 +7,8 @@ public enum ReportType {
     SEATIME,
     CERTIFICATES,
     DOCUMENTS,
-    CV;
+    CV,
+    ANEXO_1S;
 
     public static ReportType fromString(String s) {
         if (s == null || s.isBlank()) {

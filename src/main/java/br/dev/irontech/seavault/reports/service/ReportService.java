@@ -4,6 +4,7 @@ import br.dev.irontech.seavault.certificates.dto.CertificateResponse;
 import br.dev.irontech.seavault.certificates.service.CertificateService;
 import br.dev.irontech.seavault.courses.dto.CourseResponse;
 import br.dev.irontech.seavault.courses.service.CourseService;
+import br.dev.irontech.seavault.common.error.BadRequestException;
 import br.dev.irontech.seavault.documents.dto.DocumentResponse;
 import br.dev.irontech.seavault.documents.service.DocumentService;
 import br.dev.irontech.seavault.profile.dto.ProfileResponse;
@@ -73,6 +74,7 @@ public class ReportService {
             case SEATIME -> buildSeatime(userId, options, now);
             case CAREER -> buildCareer(userId, options, now);
             case CV -> buildCv(userId, options, now);
+            case ANEXO_1S -> throw new BadRequestException("Use POST /api/reports/anexo-1s para gerar Anexo 1-S");
         };
         recordHistory(userId, type, format, options, now);
         return doc;
