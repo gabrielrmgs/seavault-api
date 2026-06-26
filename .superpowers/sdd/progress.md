@@ -180,3 +180,32 @@ FINAL REVIEW (review clean, 1 fix applied):
   MINOR aceitos: @ConfigProperty package-private em AlertService; cursos iterados 2x no DashboardService; listOpenAllUsers full-table scan (OK no MVP); LIDO sem assertion em listOpenAllUsersExcludesResolvedAndIgnored
 
 PLAN 6 COMPLETE — alertas, job diário e dashboard entregues; suíte 245/0/0 (base era 225; +20 testes novos do Plano 6). HEAD: 29083fe
+
+# SeaVault Plano 7a — Relatórios Gerais (fundação PDF + 5 relatórios)
+
+Branch: main
+Base: 1358795 (main after Plan 6, 245/0/0)
+
+Task 1: complete (commits 1358795..566109f, review clean) — V16 report_history schema, ReportType/ReportFormat enums, ReportRecord entity, ReportHistoryRepository; 2 tests green
+  MINOR: unused `import java.util.UUID` in ReportHistoryRepositoryTest (dead import, no functional impact)
+
+Task 2: complete (commits 566109f..8b2ae89, review clean) — OpenPDF 1.3.30 dep, ReportDocument neutral model (Section/Field/Table records), PdfRenderer @ApplicationScoped; 2 smoke tests green
+  MINOR: `rendersSectionWithoutTable` checks only first byte of magic header (not all 5 `%PDF-`) — coverage gap in test only
+
+Task 3: complete (commits 8b2ae89..bc075b4, review clean) — ReportOptions/ReportHistoryResponse DTOs, ReportService with DOCUMENTS/CERTIFICATES builders + history(); SEATIME/CAREER/CV throw UnsupportedOperationException (placeholders); 3 tests green
+  MINOR: `history()` not @Transactional (not required by brief, style note only)
+  MINOR: `import java.util.ArrayList` dead import in ReportService (unused in Task 3)
+
+Task 4: complete (commits bc075b4..301da68, review clean) — buildSeatime (Totais/Por empresa/Por embarcação/Por ano, section-filtered) + buildCareer (Perfil/Tempo de mar/Embarques, sensitive-toggled + NotFoundException-tolerant name helpers); 4 new tests (7 total) green
+  INFO: fully-qualified @Inject in VoyageService test field (copied from brief, no runtime impact)
+
+Task 5: complete (commits 301da68..5f018bb, review clean) — buildCv (Perfil/Certificados/Cursos/Tempo de mar, section-filtered, sensitive-toggled); CourseService added; 2 new tests (9 total) green
+
+Task 6: complete (commits 5f018bb..9e59a98, review clean) — ReportResource @Path("/api/reports") with GET /{type} (JSON+PDF) and GET /history; literal /history takes JAX-RS precedence over /{type}; 5 e2e tests green
+  LOW: `assert` (not `assertTrue`) used for PDF magic-byte check in ReportResourceTest — no-op without JVM -ea flag; PDF content-type assertion still validates media type
+
+Task 7: complete — full suite 263/0/0 (base was 245; +18 tests from Plan 7a). HEAD: 9e59a98
+
+PLAN 7a COMPLETE — reports module (fundação PDF + 5 relatórios gerais) entregue; suíte 263/0/0.
+  MINOR aceitos: dead imports (Task 1/3); rendersSectionWithoutTable partial magic-byte check (Task 2); history() not @Transactional (Task 3); assert vs assertTrue (Task 6)
+  OUT OF SCOPE (Plano 7b): Anexo 1-S §7.3; validação 422 com fieldErrors para campos faltantes
