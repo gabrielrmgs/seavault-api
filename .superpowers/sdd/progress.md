@@ -175,4 +175,8 @@ Task 5: complete (commits 1e14303..b7b728d, review clean) — DashboardResponse 
 Task 6: complete (commits b7b728d..0150275, review clean) — full suite 245/0/0; 4 pre-existing boot tests fixed (assert >= 0 instead of == 0 — shared test DB has data from new tests)
   FIX: MigrationBootTest, CertificatesSchemaBootTest, CoursesSchemaBootTest, DocumentsSchemaBootTest updated same way as FilesSchemaBootTest/ProfilesSchemaBootTest in Plans 3b/5
 
-PLAN 6 COMPLETE — alertas, job diário e dashboard entregues; suíte 245/0/0 (base era 225; +20 testes novos do Plano 6).
+FINAL REVIEW (review clean, 1 fix applied):
+  FIX: DashboardResponse.Counts ganhou campo semValidade (total = semValidade + valid + expiring + expired — aritmética auto-consistente); DashboardServiceTest atualizado com assertEquals(0L, resp.documents().semValidade())
+  MINOR aceitos: @ConfigProperty package-private em AlertService; cursos iterados 2x no DashboardService; listOpenAllUsers full-table scan (OK no MVP); LIDO sem assertion em listOpenAllUsersExcludesResolvedAndIgnored
+
+PLAN 6 COMPLETE — alertas, job diário e dashboard entregues; suíte 245/0/0 (base era 225; +20 testes novos do Plano 6). HEAD: 29083fe
