@@ -70,9 +70,10 @@ public class DashboardService {
 
     private static Counts expiryCounts(List<ExpiryStatus> statuses) {
         long total = statuses.size();
+        long semValidade = statuses.stream().filter(s -> s == ExpiryStatus.SEM_VALIDADE).count();
         long valid = statuses.stream().filter(s -> s == ExpiryStatus.VALIDO).count();
         long expiring = statuses.stream().filter(s -> s == ExpiryStatus.VENCENDO).count();
         long expired = statuses.stream().filter(s -> s == ExpiryStatus.VENCIDO).count();
-        return new Counts(total, valid, expiring, expired);
+        return new Counts(total, semValidade, valid, expiring, expired);
     }
 }

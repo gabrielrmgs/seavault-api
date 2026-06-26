@@ -63,6 +63,7 @@ class DashboardServiceTest {
         DashboardResponse resp = dashboardService.summary(userId);
 
         assertEquals(3L, resp.documents().total());
+        assertEquals(0L, resp.documents().semValidade());
         assertEquals(1L, resp.documents().valid());
         assertEquals(1L, resp.documents().expiring());
         assertEquals(1L, resp.documents().expired());

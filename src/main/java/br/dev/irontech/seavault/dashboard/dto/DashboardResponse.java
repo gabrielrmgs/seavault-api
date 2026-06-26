@@ -13,7 +13,7 @@ public record DashboardResponse(
         int profileCompletion,
         List<AlertResponse> upcomingAlerts
 ) {
-    public record Counts(long total, long valid, long expiring, long expired) {}
+    public record Counts(long total, long semValidade, long valid, long expiring, long expired) {}
 
     public record SeatimeBlock(long totalDays, long activeDays, SeatimeSummaryResponse.LastVoyage lastVoyage) {}
 
