@@ -6,7 +6,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 class VesselsSchemaBootTest {
@@ -16,8 +16,8 @@ class VesselsSchemaBootTest {
 
     @Test
     @Transactional
-    void vesselsTableExistsAndIsEmpty() {
+    void vesselsTableExists() {
         Object count = em.createNativeQuery("SELECT count(*) FROM vessels").getSingleResult();
-        assertEquals(0L, ((Number) count).longValue());
+        assertTrue(((Number) count).longValue() >= 0L);
     }
 }

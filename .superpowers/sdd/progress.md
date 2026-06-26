@@ -209,3 +209,17 @@ Task 7: complete — full suite 263/0/0 (base was 245; +18 tests from Plan 7a). 
 PLAN 7a COMPLETE — reports module (fundação PDF + 5 relatórios gerais) entregue; suíte 263/0/0.
   MINOR aceitos: dead imports (Task 1/3); rendersSectionWithoutTable partial magic-byte check (Task 2); history() not @Transactional (Task 3); assert vs assertTrue (Task 6)
   OUT OF SCOPE (Plano 7b): Anexo 1-S §7.3; validação 422 com fieldErrors para campos faltantes
+
+# SeaVault Plano 7b - Anexo 1-S (Atestado de Embarque)
+
+Branch: feat/anexo-1s
+Base: dce1223 (main after Plan 7a, 263/0/0)
+
+Task 1: complete (commits dce1223..6c6c7da, review clean) - BusinessException carrega fieldErrors; AppExceptionMapper emite fieldErrors; AppExceptionMapperTest 4 green
+Task 2: complete (commits 6c6c7da..254e442, review clean) - ReportNames extraido; ReportService delega resolucao de nomes/formatacao; regressao ReportServiceTest/ReportResourceTest/PdfRendererTest 16 green
+Task 3: complete (commits 254e442..6f6c55d, review clean) - ReportType.ANEXO_1S, Anexo1SRequest e Anexo1SService com validacao 422 agregada, montagem do ReportDocument e historico; Anexo1SServiceTest 5 green
+Task 4: complete (commits 6f6c55d..79ad80d, review clean) - Anexo1SResource POST /api/reports/anexo-1s com PDF default e JSON opcional; Anexo1SResourceTest 6 green
+Task 5: complete (full suite: 276 tests, 0 failures, 0 errors)
+  FIX: VesselsSchemaBootTest e CompaniesSchemaBootTest agora validam existencia da tabela (count >= 0), nao tabela vazia; e2e do Anexo cria vessels/companies antes desses boot tests na suite compartilhada.
+
+PLAN 7b COMPLETE - Anexo 1-S entregue com validacao de campos obrigatorios, PDF/JSON e historico; modulo reports completo (7a+7b); backend MVP do PRD concluido. Suite 276/0/0.
