@@ -2,6 +2,7 @@ package br.dev.irontech.seavault.courses.repo;
 
 import br.dev.irontech.seavault.common.page.PageRequest;
 import br.dev.irontech.seavault.courses.domain.Course;
+import br.dev.irontech.seavault.courses.domain.CourseStatus;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -25,5 +26,9 @@ public class CourseRepository implements PanacheRepositoryBase<Course, UUID> {
 
     public long countActiveByUser(UUID userId) {
         return count("userId = ?1 and deletedAt is null", userId);
+    }
+
+    public List<Course> listCompletedByUser(UUID userId) {
+        return find("userId = ?1 and deletedAt is null and status = ?2", userId, CourseStatus.CONCLUIDO).list();
     }
 }
