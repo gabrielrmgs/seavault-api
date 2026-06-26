@@ -2,6 +2,8 @@ package br.dev.irontech.seavault.reports.service;
 
 import br.dev.irontech.seavault.certificates.dto.CertificateResponse;
 import br.dev.irontech.seavault.certificates.service.CertificateService;
+import br.dev.irontech.seavault.courses.dto.CourseResponse;
+import br.dev.irontech.seavault.courses.service.CourseService;
 import br.dev.irontech.seavault.common.error.NotFoundException;
 import br.dev.irontech.seavault.companies.service.CompanyService;
 import br.dev.irontech.seavault.documents.dto.DocumentResponse;
@@ -47,6 +49,7 @@ public class ReportService {
     private final CompanyService companyService;
     private final ProfileService profileService;
     private final UserRepository userRepository;
+    private final CourseService courseService;
 
     public ReportService(DocumentService documentService,
                          CertificateService certificateService,
@@ -57,7 +60,8 @@ public class ReportService {
                          VesselService vesselService,
                          CompanyService companyService,
                          ProfileService profileService,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         CourseService courseService) {
         this.documentService = documentService;
         this.certificateService = certificateService;
         this.referenceRepository = referenceRepository;
@@ -68,6 +72,7 @@ public class ReportService {
         this.companyService = companyService;
         this.profileService = profileService;
         this.userRepository = userRepository;
+        this.courseService = courseService;
     }
 
     @Transactional
@@ -78,7 +83,7 @@ public class ReportService {
             case CERTIFICATES -> buildCertificates(userId, options, now);
             case SEATIME -> buildSeatime(userId, options, now);
             case CAREER -> buildCareer(userId, options, now);
-            case CV -> throw new UnsupportedOperationException("CV implementado na Task 5");
+            case CV -> buildCv(userId, options, now);
         };
         recordHistory(userId, type, format, options, now);
         return doc;
@@ -217,6 +222,58 @@ public class ReportService {
         }
 
         return new ReportDocument("CAREER", "Relatório de Carreira", now, sections);
+    }
+
+    private ReportDocument buildCv(UUID userId, ReportOptions options, Instant now) {
+        List<Section> sections = new ArrayList<>();
+
+        if (options.wants("profile")) {
+            ProfileResponse p = profileService.getOrCreate(userId);
+            String userName = userRepository.findByIdOptional(userId).map(u -> u.name).orElse("—");
+            List<Field> fields = new ArrayList<>();
+            fields.add(new Field("Nome", nz(userName)));
+            fields.add(new Field("Nacionalidade", nz(p.nationality())));
+            fields.add(new Field("Categoria", categoryName(p.categoryId())));
+            fields.add(new Field("CIR", nz(p.cir())));
+            if (options.includeSensitive()) {
+                fields.add(new Field("CPF", nz(p.cpf())));
+                fields.add(new Field("RG", nz(p.rg())));
+            }
+            sections.add(new Section("Perfil", fields, null));
+        }
+
+        if (options.wants("certificates")) {
+            List<CertificateResponse> certs = certificateService.listAllForUser(userId);
+            List<List<String>> rows = certs.stream()
+                    .map(c -> List.of(nz(c.name()), nz(c.institution()), dateStr(c.expiryDate()), c.status().name()))
+                    .toList();
+            sections.add(new Section("Certificados", List.of(),
+                    new Table(List.of("Nome", "Instituição", "Validade", "Status"), rows)));
+        }
+
+        if (options.wants("courses")) {
+            List<CourseResponse> courses = courseService.listAllForUser(userId);
+            List<List<String>> rows = courses.stream()
+                    .map(c -> List.of(
+                            nz(c.name()),
+                            nz(c.institution()),
+                            c.workloadHours() == null ? "—" : str(c.workloadHours()),
+                            c.status().name()))
+                    .toList();
+            sections.add(new Section("Cursos", List.of(),
+                    new Table(List.of("Curso", "Instituição", "Carga horária", "Status"), rows)));
+        }
+
+        if (options.wants("seatime")) {
+            SeatimeSummaryResponse st = seatimeService.summary(userId);
+            sections.add(new Section("Tempo de mar", List.of(
+                    new Field("Total de dias", str(st.totalDays())),
+                    new Field("Maior contrato (dias)",
+                            st.longestContractDays() == null ? "—" : str(st.longestContractDays()))),
+                    null));
+        }
+
+        return new ReportDocument("CV", "Currículo Marítimo", now, sections);
     }
 
     String vesselName(UUID userId, UUID id) {

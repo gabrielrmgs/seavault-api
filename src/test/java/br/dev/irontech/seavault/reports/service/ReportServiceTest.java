@@ -37,6 +37,7 @@ class ReportServiceTest {
     @Inject UserRepository userRepository;
     @Inject ReferenceRepository referenceRepository;
     @jakarta.inject.Inject br.dev.irontech.seavault.voyages.service.VoyageService voyageService;
+    @jakarta.inject.Inject br.dev.irontech.seavault.courses.service.CourseService courseService;
 
     private static final ReportOptions DEFAULT_OPTS = new ReportOptions(false, Set.of());
 
@@ -139,6 +140,38 @@ class ReportServiceTest {
 
         var profile = doc.sections().stream().filter(s -> "Perfil".equals(s.heading())).findFirst().orElseThrow();
         assertTrue(profile.fields().stream().anyMatch(f -> f.label().equals("CPF")));
+    }
+
+    @Test
+    void cvReportHasProfileCertificatesCoursesAndSeatime() {
+        UUID userId = newUser("rep-svc-cv@example.com");
+        certificateService.create(userId, new CertificateRequest(
+                "STCW Basico", "BST", "Escola", LocalDate.now().minusYears(1),
+                LocalDate.now().plusYears(2), null));
+        courseService.create(userId, new br.dev.irontech.seavault.courses.dto.CourseRequest(
+                "CFAQ", null, "EFOMM", "Presencial", 200, LocalDate.now().minusMonths(2),
+                LocalDate.now().minusMonths(1), br.dev.irontech.seavault.courses.domain.CourseStatus.CONCLUIDO, null));
+
+        ReportDocument doc = reportService.generate(userId, ReportType.CV, ReportFormat.JSON, DEFAULT_OPTS);
+
+        assertEquals("CV", doc.type());
+        assertTrue(doc.sections().stream().anyMatch(s -> "Perfil".equals(s.heading())));
+        var certs = doc.sections().stream().filter(s -> "Certificados".equals(s.heading())).findFirst().orElseThrow();
+        assertEquals(1, certs.table().rows().size());
+        var courses = doc.sections().stream().filter(s -> "Cursos".equals(s.heading())).findFirst().orElseThrow();
+        assertEquals(1, courses.table().rows().size());
+        assertTrue(doc.sections().stream().anyMatch(s -> "Tempo de mar".equals(s.heading())));
+    }
+
+    @Test
+    void cvReportSectionFilterKeepsOnlyRequested() {
+        UUID userId = newUser("rep-svc-cv-filter@example.com");
+
+        ReportDocument doc = reportService.generate(userId, ReportType.CV, ReportFormat.JSON,
+                new ReportOptions(false, Set.of("profile")));
+
+        assertEquals(1, doc.sections().size());
+        assertEquals("Perfil", doc.sections().get(0).heading());
     }
 
     @Test
