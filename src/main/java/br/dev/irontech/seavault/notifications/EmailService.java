@@ -24,4 +24,10 @@ public class EmailService {
                 "SeaVault — Redefinição de senha",
                 "Para redefinir sua senha, acesse: " + resetUrl));
     }
+
+    public void sendAlertDigest(String to, String summary) {
+        mailer.send(Mail.withText(to,
+                "SeaVault — Seus alertas",
+                summary));
+    }
 }
