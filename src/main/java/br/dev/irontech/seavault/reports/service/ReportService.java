@@ -2,8 +2,13 @@ package br.dev.irontech.seavault.reports.service;
 
 import br.dev.irontech.seavault.certificates.dto.CertificateResponse;
 import br.dev.irontech.seavault.certificates.service.CertificateService;
+import br.dev.irontech.seavault.common.error.NotFoundException;
+import br.dev.irontech.seavault.companies.service.CompanyService;
 import br.dev.irontech.seavault.documents.dto.DocumentResponse;
 import br.dev.irontech.seavault.documents.service.DocumentService;
+import br.dev.irontech.seavault.profile.dto.ProfileResponse;
+import br.dev.irontech.seavault.profile.service.ProfileService;
+import br.dev.irontech.seavault.auth.repo.UserRepository;
 import br.dev.irontech.seavault.reference.repo.ReferenceRepository;
 import br.dev.irontech.seavault.reports.domain.ReportFormat;
 import br.dev.irontech.seavault.reports.domain.ReportRecord;
@@ -15,6 +20,11 @@ import br.dev.irontech.seavault.reports.pdf.ReportDocument.Field;
 import br.dev.irontech.seavault.reports.pdf.ReportDocument.Section;
 import br.dev.irontech.seavault.reports.pdf.ReportDocument.Table;
 import br.dev.irontech.seavault.reports.repo.ReportHistoryRepository;
+import br.dev.irontech.seavault.seatime.dto.SeatimeSummaryResponse;
+import br.dev.irontech.seavault.seatime.service.SeatimeService;
+import br.dev.irontech.seavault.vessels.service.VesselService;
+import br.dev.irontech.seavault.voyages.dto.VoyageResponse;
+import br.dev.irontech.seavault.voyages.service.VoyageService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -31,15 +41,33 @@ public class ReportService {
     private final CertificateService certificateService;
     private final ReferenceRepository referenceRepository;
     private final ReportHistoryRepository reportHistoryRepository;
+    private final SeatimeService seatimeService;
+    private final VoyageService voyageService;
+    private final VesselService vesselService;
+    private final CompanyService companyService;
+    private final ProfileService profileService;
+    private final UserRepository userRepository;
 
     public ReportService(DocumentService documentService,
                          CertificateService certificateService,
                          ReferenceRepository referenceRepository,
-                         ReportHistoryRepository reportHistoryRepository) {
+                         ReportHistoryRepository reportHistoryRepository,
+                         SeatimeService seatimeService,
+                         VoyageService voyageService,
+                         VesselService vesselService,
+                         CompanyService companyService,
+                         ProfileService profileService,
+                         UserRepository userRepository) {
         this.documentService = documentService;
         this.certificateService = certificateService;
         this.referenceRepository = referenceRepository;
         this.reportHistoryRepository = reportHistoryRepository;
+        this.seatimeService = seatimeService;
+        this.voyageService = voyageService;
+        this.vesselService = vesselService;
+        this.companyService = companyService;
+        this.profileService = profileService;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -48,8 +76,8 @@ public class ReportService {
         ReportDocument doc = switch (type) {
             case DOCUMENTS -> buildDocuments(userId, options, now);
             case CERTIFICATES -> buildCertificates(userId, options, now);
-            case SEATIME -> throw new UnsupportedOperationException("SEATIME implementado na Task 4");
-            case CAREER -> throw new UnsupportedOperationException("CAREER implementado na Task 4");
+            case SEATIME -> buildSeatime(userId, options, now);
+            case CAREER -> buildCareer(userId, options, now);
             case CV -> throw new UnsupportedOperationException("CV implementado na Task 5");
         };
         recordHistory(userId, type, format, options, now);
@@ -105,6 +133,119 @@ public class ReportService {
                 + ";sections=" + String.join(",", options.sections());
         r.generatedAt = now;
         reportHistoryRepository.persist(r);
+    }
+
+    private ReportDocument buildSeatime(UUID userId, ReportOptions options, Instant now) {
+        SeatimeSummaryResponse st = seatimeService.summary(userId);
+        List<Section> sections = new ArrayList<>();
+
+        if (options.wants("totals")) {
+            sections.add(new Section("Totais", List.of(
+                    new Field("Total de dias", str(st.totalDays())),
+                    new Field("Dias (embarque ativo)", str(st.activeDays())),
+                    new Field("Últimos 12 meses", str(st.last12MonthsDays())),
+                    new Field("Últimos 5 anos", str(st.last5YearsDays())),
+                    new Field("Maior contrato (dias)",
+                            st.longestContractDays() == null ? "—" : str(st.longestContractDays()))),
+                    null));
+        }
+        if (options.wants("byCompany")) {
+            List<List<String>> rows = st.byCompany().stream()
+                    .map(e -> List.of(companyName(userId, e.id()), str(e.days())))
+                    .toList();
+            sections.add(new Section("Por empresa", List.of(),
+                    new Table(List.of("Empresa", "Dias"), rows)));
+        }
+        if (options.wants("byVessel")) {
+            List<List<String>> rows = st.byVessel().stream()
+                    .map(e -> List.of(vesselName(userId, e.id()), str(e.days())))
+                    .toList();
+            sections.add(new Section("Por embarcação", List.of(),
+                    new Table(List.of("Embarcação", "Dias"), rows)));
+        }
+        if (options.wants("byYear")) {
+            List<List<String>> rows = st.byYear().stream()
+                    .map(e -> List.of(str(e.year()), str(e.days())))
+                    .toList();
+            sections.add(new Section("Por ano", List.of(),
+                    new Table(List.of("Ano", "Dias"), rows)));
+        }
+        return new ReportDocument("SEATIME", "Relatório de Tempo de Embarque", now, sections);
+    }
+
+    private ReportDocument buildCareer(UUID userId, ReportOptions options, Instant now) {
+        List<Section> sections = new ArrayList<>();
+
+        if (options.wants("profile")) {
+            ProfileResponse p = profileService.getOrCreate(userId);
+            String userName = userRepository.findByIdOptional(userId).map(u -> u.name).orElse("—");
+            List<Field> fields = new ArrayList<>();
+            fields.add(new Field("Nome", nz(userName)));
+            fields.add(new Field("CIR", nz(p.cir())));
+            fields.add(new Field("Nacionalidade", nz(p.nationality())));
+            fields.add(new Field("Categoria", categoryName(p.categoryId())));
+            if (options.includeSensitive()) {
+                fields.add(new Field("CPF", nz(p.cpf())));
+                fields.add(new Field("RG", nz(p.rg())));
+            }
+            sections.add(new Section("Perfil", fields, null));
+        }
+
+        if (options.wants("seatime")) {
+            SeatimeSummaryResponse st = seatimeService.summary(userId);
+            sections.add(new Section("Tempo de mar", List.of(
+                    new Field("Total de dias", str(st.totalDays())),
+                    new Field("Últimos 12 meses", str(st.last12MonthsDays()))),
+                    null));
+        }
+
+        if (options.wants("voyages")) {
+            List<VoyageResponse> voyages = voyageService.listAllForUser(userId);
+            List<List<String>> rows = voyages.stream()
+                    .map(v -> List.of(
+                            vesselName(userId, v.vesselId()),
+                            companyName(userId, v.companyId()),
+                            nz(v.role()),
+                            dateStr(v.embarkDate()),
+                            dateStr(v.disembarkDate()),
+                            v.effectiveDays() == null ? "—" : str(v.effectiveDays()),
+                            nz(v.status())))
+                    .toList();
+            sections.add(new Section("Embarques", List.of(),
+                    new Table(List.of("Embarcação", "Empresa", "Função", "Embarque", "Desembarque", "Dias", "Status"),
+                            rows)));
+        }
+
+        return new ReportDocument("CAREER", "Relatório de Carreira", now, sections);
+    }
+
+    String vesselName(UUID userId, UUID id) {
+        if (id == null) {
+            return "—";
+        }
+        try {
+            return vesselService.get(userId, id).name();
+        } catch (NotFoundException e) {
+            return "—";
+        }
+    }
+
+    String companyName(UUID userId, UUID id) {
+        if (id == null) {
+            return "—";
+        }
+        try {
+            return companyService.get(userId, id).name();
+        } catch (NotFoundException e) {
+            return "—";
+        }
+    }
+
+    String categoryName(UUID id) {
+        if (id == null) {
+            return "—";
+        }
+        return referenceRepository.findCategoryById(id).map(c -> c.name).orElse("—");
     }
 
     // ---- helpers reusados pelas Tasks 4 e 5 ----

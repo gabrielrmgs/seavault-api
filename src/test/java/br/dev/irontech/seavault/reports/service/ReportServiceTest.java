@@ -14,6 +14,7 @@ import br.dev.irontech.seavault.reports.domain.ReportFormat;
 import br.dev.irontech.seavault.reports.domain.ReportType;
 import br.dev.irontech.seavault.reports.dto.ReportOptions;
 import br.dev.irontech.seavault.reports.pdf.ReportDocument;
+import br.dev.irontech.seavault.voyages.service.VoyageService;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -35,6 +36,7 @@ class ReportServiceTest {
     @Inject CertificateService certificateService;
     @Inject UserRepository userRepository;
     @Inject ReferenceRepository referenceRepository;
+    @jakarta.inject.Inject br.dev.irontech.seavault.voyages.service.VoyageService voyageService;
 
     private static final ReportOptions DEFAULT_OPTS = new ReportOptions(false, Set.of());
 
@@ -86,6 +88,57 @@ class ReportServiceTest {
         var section = doc.sections().get(0);
         assertEquals(1, section.table().rows().size());
         assertTrue(section.table().rows().get(0).contains("STCW Basico"));
+    }
+
+    @Test
+    void seatimeReportHasTotalsSection() {
+        UUID userId = newUser("rep-svc-seatime@example.com");
+        voyageService.create(userId, new br.dev.irontech.seavault.voyages.dto.VoyageRequest(
+                LocalDate.now().minusDays(40), LocalDate.now().minusDays(10),
+                null, null, null, null, "Comandante", null, null, null, null, null));
+
+        ReportDocument doc = reportService.generate(userId, ReportType.SEATIME, ReportFormat.JSON, DEFAULT_OPTS);
+
+        assertEquals("SEATIME", doc.type());
+        assertTrue(doc.sections().stream().anyMatch(s -> "Totais".equals(s.heading())));
+        var totals = doc.sections().stream().filter(s -> "Totais".equals(s.heading())).findFirst().orElseThrow();
+        assertTrue(totals.fields().stream().anyMatch(f -> f.label().equals("Total de dias")));
+    }
+
+    @Test
+    void seatimeReportRespectsSectionFilter() {
+        UUID userId = newUser("rep-svc-seatime-filter@example.com");
+        voyageService.create(userId, new br.dev.irontech.seavault.voyages.dto.VoyageRequest(
+                LocalDate.now().minusDays(40), LocalDate.now().minusDays(10),
+                null, null, null, null, "Comandante", null, null, null, null, null));
+
+        ReportDocument doc = reportService.generate(userId, ReportType.SEATIME, ReportFormat.JSON,
+                new ReportOptions(false, Set.of("totals")));
+
+        assertEquals(1, doc.sections().size());
+        assertEquals("Totais", doc.sections().get(0).heading());
+    }
+
+    @Test
+    void careerReportOmitsSensitiveByDefault() {
+        UUID userId = newUser("rep-svc-career@example.com");
+
+        ReportDocument doc = reportService.generate(userId, ReportType.CAREER, ReportFormat.JSON, DEFAULT_OPTS);
+
+        assertEquals("CAREER", doc.type());
+        var profile = doc.sections().stream().filter(s -> "Perfil".equals(s.heading())).findFirst().orElseThrow();
+        assertTrue(profile.fields().stream().noneMatch(f -> f.label().equals("CPF")));
+    }
+
+    @Test
+    void careerReportIncludesSensitiveWhenRequested() {
+        UUID userId = newUser("rep-svc-career-sens@example.com");
+
+        ReportDocument doc = reportService.generate(userId, ReportType.CAREER, ReportFormat.JSON,
+                new ReportOptions(true, Set.of()));
+
+        var profile = doc.sections().stream().filter(s -> "Perfil".equals(s.heading())).findFirst().orElseThrow();
+        assertTrue(profile.fields().stream().anyMatch(f -> f.label().equals("CPF")));
     }
 
     @Test
