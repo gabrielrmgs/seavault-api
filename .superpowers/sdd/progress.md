@@ -136,3 +136,18 @@ Task 7: complete (full suite: 204 tests, 0 failures, 0 errors)
   NOTE: plano estimava 205 testes, mas a suíte real reporta 204; VoyageServiceTest possui 11 testes (não 12).
 
 PLAN 4 COMPLETE — voyages e seatime entregues; suíte 204/0/0.
+
+# SeaVault Plano 5 - Motor de Elegibilidade (eligibility)
+
+Branch: feat/eligibility
+Base: c0fd955 (main after Plan 4, 204/0/0)
+
+Task 1: complete (commits c0fd955..67e1c0a, review clean) - V13 schema ref_eligibility_rules/ref_eligibility_requirements, entidades EligibilityRule/EligibilityRequirement e enum RequirementType; EligibilitySchemaBootTest 1 green
+Task 2: complete (commits 67e1c0a..dca6fa7, review clean) - V14 seed com 3 regras exemplares + consultas no ReferenceRepository; EligibilityRulesSeedTest 3 green
+Task 3: complete (commits dca6fa7..189e573, review clean + ajustes) - EligibilityService data-driven, EligibilityResponse, BadRequestException e CourseRepository.listCompletedByUser; EligibilityServiceTest 11 green
+  FIX: service tests cobrem curso planejado/em andamento e curso concluido de outro usuario nao satisfazendo requisito; labels alinhados ao contrato do plano.
+Task 4: complete (commits 189e573..4f9f338, review clean) - EligibilityResource REST GET /api/eligibility autenticado; EligibilityResourceTest 6 green
+Task 5: complete (full suite: 225 tests, 0 failures, 0 errors)
+  FIX: ProfilesSchemaBootTest valida existencia da tabela (>= 0), nao tabela vazia, porque a suite compartilhada agora cria perfis antes do boot test via e2e de eligibility.
+
+PLAN 5 COMPLETE - motor de elegibilidade entregue: regras data-driven, seed exemplar, service read-only, endpoint autenticado e suite verde (225/0/0).
