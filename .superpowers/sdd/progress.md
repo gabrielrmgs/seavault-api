@@ -151,3 +151,28 @@ Task 5: complete (full suite: 225 tests, 0 failures, 0 errors)
   FIX: ProfilesSchemaBootTest valida existencia da tabela (>= 0), nao tabela vazia, porque a suite compartilhada agora cria perfis antes do boot test via e2e de eligibility.
 
 PLAN 5 COMPLETE - motor de elegibilidade entregue: regras data-driven, seed exemplar, service read-only, endpoint autenticado e suite verde (225/0/0).
+
+# SeaVault Plano 6 — Alertas + Job diário & Dashboard
+
+Branch: feat/alerts-dashboard
+Base: 30b2c71 (main after Plan 5, 225/0/0)
+
+Task 1: complete (commits 30b2c71..49c3d3a, review clean) — V15 schema, AlertSource/AlertType/AlertStatus enums, Alert entity, AlertRepository (8 methods); AlertsSchemaBootTest 1/1, AlertRepositoryTest 3/3 green
+  MINOR: AlertsSchemaBootTest asserts >= 0 (catches via exception if table absent — acceptable)
+  MINOR: listOpenAllUsers test doesn't assert LIDO inclusion (only exclusions tested)
+  MINOR: listPendingByUser nulls sort order unspecified for null dueDate
+Task 2: complete (commits 49c3d3a..b6513ac, review clean) — DueItem record, 4 repo queries, dueForAlerts+listAllForUser on 4 services, DueItemsTest 4/4 green
+  MINOR: newUser() @Transactional helper + non-@Transactional @Test (latent; no FK issue now)
+  MINOR: userId local var in doc/cert tests unused (dead variable)
+Task 3: complete (commits b6513ac..90ddac8, review clean) — quarkus-scheduler dep, config seavault.alerts.*, EmailService.sendAlertDigest, AlertService.runDailyScan (upsert+auto-resolve+digest), AlertScheduler; AlertServiceTest 5/5 green
+  MINOR: @ConfigProperty fields package-private (not private) — CDI works, stylistic only
+  MINOR: IGNORADO test coverage concern resolved — listOpenAllUsers only returns PENDENTE/LIDO so IGNORADO is safe from auto-resolve
+Task 4: complete (commits 90ddac8..1e14303, review clean) — AlertResponse/AlertStatusRequest DTOs, AlertService.list/changeStatus/upcoming/toResponse, AlertResource GET+PATCH; AlertResourceTest 4/4 green
+  MINOR: upcoming method has no direct test (brief didn't require it; consumed in Task 5)
+  MINOR: tokenFor helper uses fixed emails (same pattern as rest of project)
+Task 5: complete (commits 1e14303..b7b728d, review clean) — DashboardResponse (Counts/SeatimeBlock/CourseCounts), DashboardService.summary, DashboardResource GET /api/dashboard; DashboardServiceTest 1/1 + DashboardResourceTest 2/2 green
+  MINOR: courses list iterated twice (completed + pending streams); harmless at MVP scale
+Task 6: complete (commits b7b728d..0150275, review clean) — full suite 245/0/0; 4 pre-existing boot tests fixed (assert >= 0 instead of == 0 — shared test DB has data from new tests)
+  FIX: MigrationBootTest, CertificatesSchemaBootTest, CoursesSchemaBootTest, DocumentsSchemaBootTest updated same way as FilesSchemaBootTest/ProfilesSchemaBootTest in Plans 3b/5
+
+PLAN 6 COMPLETE — alertas, job diário e dashboard entregues; suíte 245/0/0 (base era 225; +20 testes novos do Plano 6).
