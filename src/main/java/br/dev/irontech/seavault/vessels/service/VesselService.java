@@ -47,6 +47,12 @@ public class VesselService {
         return PageResponse.of(content, page, vesselRepository.countActiveByUser(userId));
     }
 
+    public List<VesselResponse> listAllForUser(UUID userId) {
+        return vesselRepository.listAllActiveByUser(userId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     @Transactional
     public VesselResponse update(UUID userId, UUID id, VesselRequest req) {
         Vessel v = requireOwned(userId, id);

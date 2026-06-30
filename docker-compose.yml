@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command: ["postgres", "-c", "max_connections=120"]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      QUARKUS_PROFILE: prod
+      DB_URL: ${DB_URL}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_PRIVATE_KEY_LOCATION: ${JWT_PRIVATE_KEY_LOCATION}
+      SEAVAULT_CORS_ORIGINS: ${SEAVAULT_CORS_ORIGINS}
+      SEAVAULT_PII_KEY: ${SEAVAULT_PII_KEY}
+      SEAVAULT_FILES_DIR: ${SEAVAULT_FILES_DIR}
+      SEAVAULT_APP_BASE_URL: ${SEAVAULT_APP_BASE_URL}
+      QUARKUS_MAILER_HOST: ${QUARKUS_MAILER_HOST}
+      QUARKUS_MAILER_PORT: ${QUARKUS_MAILER_PORT}
+      QUARKUS_MAILER_USERNAME: ${QUARKUS_MAILER_USERNAME}
+      QUARKUS_MAILER_PASSWORD: ${QUARKUS_MAILER_PASSWORD}
+      QUARKUS_MAILER_START_TLS: ${QUARKUS_MAILER_START_TLS}
+    ports:
+      - "8080:8080"
+    volumes:
+      - files-data:/deployments/data/files
+      - ./secrets:/deployments/secrets:ro
+
+volumes:
+  db-data:
+  files-data:

@@ -1,5 +1,6 @@
 package br.dev.irontech.seavault.reports.api;
 
+import br.dev.irontech.seavault.common.http.ContentDisposition;
 import br.dev.irontech.seavault.profile.api.CurrentUser;
 import br.dev.irontech.seavault.reports.domain.ReportFormat;
 import br.dev.irontech.seavault.reports.domain.ReportType;
@@ -59,7 +60,7 @@ public class ReportResource {
             byte[] pdf = pdfRenderer.render(doc);
             String filename = reportType.name().toLowerCase() + ".pdf";
             return Response.ok(pdf, "application/pdf")
-                    .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                    .header("Content-Disposition", ContentDisposition.attachment(filename))
                     .build();
         }
         return Response.ok(doc).build();

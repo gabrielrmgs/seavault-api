@@ -47,6 +47,12 @@ public class CompanyService {
         return PageResponse.of(content, page, companyRepository.countActiveByUser(userId));
     }
 
+    public List<CompanyResponse> listAllForUser(UUID userId) {
+        return companyRepository.listAllActiveByUser(userId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     @Transactional
     public CompanyResponse update(UUID userId, UUID id, CompanyRequest req) {
         Company c = requireOwned(userId, id);

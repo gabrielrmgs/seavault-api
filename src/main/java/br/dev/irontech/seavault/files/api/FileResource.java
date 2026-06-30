@@ -1,6 +1,7 @@
 package br.dev.irontech.seavault.files.api;
 
 import br.dev.irontech.seavault.common.error.BusinessException;
+import br.dev.irontech.seavault.common.http.ContentDisposition;
 import br.dev.irontech.seavault.common.page.PageRequest;
 import br.dev.irontech.seavault.common.page.PageResponse;
 import br.dev.irontech.seavault.files.dto.FileDownload;
@@ -75,7 +76,7 @@ public class FileResource {
         FileDownload d = fileService.download(currentUser.id(), id);
         return Response.ok(d.content())
                 .type(d.contentType())
-                .header("Content-Disposition", "attachment; filename=\"" + d.originalName() + "\"")
+                .header("Content-Disposition", ContentDisposition.attachment(d.originalName()))
                 .build();
     }
 
