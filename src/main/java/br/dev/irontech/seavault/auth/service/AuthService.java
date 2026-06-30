@@ -24,6 +24,7 @@ import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -31,6 +32,11 @@ import java.util.Optional;
 
 @ApplicationScoped
 public class AuthService {
+
+    private static final String DUMMY_HASH =
+            "$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5.Z0kQ7Z2lJ9Q3oI3sJpQ1bQ9q2K";
+
+    private static final Logger LOG = Logger.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
     private final EmailTokenRepository emailTokenRepository;
@@ -49,6 +55,9 @@ public class AuthService {
 
     @ConfigProperty(name = "seavault.jwt.refresh-ttl-days")
     long refreshTtlDays;
+
+    @ConfigProperty(name = "seavault.legal.terms-version")
+    String termsVersion;
 
     public AuthService(UserRepository userRepository,
                        EmailTokenRepository emailTokenRepository,
@@ -76,6 +85,7 @@ public class AuthService {
         user.role = UserRole.USER;
         user.emailVerified = false;
         user.termsAcceptedAt = Instant.now();
+        user.termsVersion = termsVersion;
         userRepository.persist(user);
 
         String raw = OpaqueTokens.generate();
@@ -86,7 +96,11 @@ public class AuthService {
         token.expiresAt = Instant.now().plus(confirmTtlHours, ChronoUnit.HOURS);
         emailTokenRepository.persist(token);
 
-        emailService.sendConfirmEmail(user.email, baseUrl + "/api/auth/confirm-email?token=" + raw);
+        try {
+            emailService.sendConfirmEmail(user.email, baseUrl + "/api/auth/confirm-email?token=" + raw);
+        } catch (RuntimeException e) {
+            LOG.errorf(e, "Falha ao enviar e-mail de confirmacao para %s", user.email);
+        }
         return new RegisterResponse(user.id, user.email);
     }
 
@@ -105,21 +119,26 @@ public class AuthService {
 
     @Transactional
     public TokenResponse login(LoginRequest req) {
-        User user = userRepository.findActiveByEmail(req.email())
-                .orElseThrow(() -> new UnauthorizedException("Credenciais inválidas"));
-        if (user.status != UserStatus.ATIVO
-                || !BcryptUtil.matches(req.password(), user.passwordHash)) {
+        Optional<User> maybeUser = userRepository.findActiveByEmail(req.email());
+        String hash = maybeUser.map(u -> u.passwordHash).orElse(DUMMY_HASH);
+        boolean matches = BcryptUtil.matches(req.password(), hash);
+        if (maybeUser.isEmpty() || maybeUser.get().status != UserStatus.ATIVO || !matches) {
             throw new UnauthorizedException("Credenciais inválidas");
         }
-        return issueTokens(user);
+        return issueTokens(maybeUser.get());
     }
 
     @Transactional
     public TokenResponse refresh(String rawRefreshToken) {
-        RefreshToken current = refreshTokenRepository
-                .findValidByHash(OpaqueTokens.sha256(rawRefreshToken), Instant.now())
-                .orElseThrow(() -> new UnauthorizedException("Refresh token inválido"));
-        current.revokedAt = Instant.now();
+        Instant now = Instant.now();
+        String hash = OpaqueTokens.sha256(rawRefreshToken);
+        RefreshToken current = refreshTokenRepository.findValidByHash(hash, now)
+                .orElseGet(() -> {
+                    refreshTokenRepository.findAnyByHash(hash).ifPresent(reused ->
+                            refreshTokenRepository.revokeActiveByUser(reused.userId, Instant.now()));
+                    throw new UnauthorizedException("Refresh token inválido");
+                });
+        current.revokedAt = now;
         User user = userRepository.findById(current.userId);
         if (user == null || user.deletedAt != null || user.status != UserStatus.ATIVO) {
             throw new UnauthorizedException("Usuário indisponível");

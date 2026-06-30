@@ -41,4 +41,8 @@ public class CourseRepository implements PanacheRepositoryBase<Course, UUID> {
     public List<Course> listAllActiveByUser(UUID userId) {
         return find("userId = ?1 and deletedAt is null", Sort.by("createdAt").descending(), userId).list();
     }
+
+    public void softDeleteByUser(UUID userId, java.time.Instant deletedAt) {
+        update("deletedAt = ?1 where userId = ?2 and deletedAt is null", deletedAt, userId);
+    }
 }

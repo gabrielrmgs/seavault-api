@@ -22,7 +22,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -132,9 +131,10 @@ public class FileService {
     }
 
     public List<FileResponse> filesForOwner(UUID userId, OwnerType ownerType, UUID ownerId) {
-        return fileLinkRepository.listActiveByOwner(ownerType, ownerId).stream()
-                .map(l -> fileRepository.findActiveByIdAndUser(l.fileId, userId).orElse(null))
-                .filter(Objects::nonNull)
+        List<UUID> fileIds = fileLinkRepository.listActiveByOwner(ownerType, ownerId).stream()
+                .map(l -> l.fileId)
+                .toList();
+        return fileRepository.findActiveByIdsAndUser(fileIds, userId).stream()
                 .map(this::toResponse)
                 .toList();
     }

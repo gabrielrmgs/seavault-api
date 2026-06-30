@@ -35,4 +35,8 @@ public class VoyageRepository implements PanacheRepositoryBase<Voyage, UUID> {
     public List<Voyage> listActiveEmbarkedBeforeAllUsers(LocalDate cutoff) {
         return find("disembarkDate is null and embarkDate <= ?1 and deletedAt is null", cutoff).list();
     }
+
+    public void softDeleteByUser(UUID userId, java.time.Instant deletedAt) {
+        update("deletedAt = ?1 where userId = ?2 and deletedAt is null", deletedAt, userId);
+    }
 }

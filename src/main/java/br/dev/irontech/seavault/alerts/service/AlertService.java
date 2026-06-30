@@ -20,6 +20,7 @@ import br.dev.irontech.seavault.voyages.service.VoyageService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -34,6 +35,8 @@ import java.util.UUID;
 
 @ApplicationScoped
 public class AlertService {
+
+    private static final Logger LOG = Logger.getLogger(AlertService.class);
 
     private static final int[] WINDOWS = {7, 15, 30, 60, 90};
 
@@ -140,8 +143,12 @@ public class AlertService {
         }
 
         for (UUID userId : usersWithNewAlerts) {
-            userRepository.findByIdOptional(userId)
-                    .ifPresent(u -> emailService.sendAlertDigest(u.email, digestSummary(userId)));
+            try {
+                userRepository.findByIdOptional(userId)
+                        .ifPresent(u -> emailService.sendAlertDigest(u.email, digestSummary(userId)));
+            } catch (RuntimeException e) {
+                LOG.errorf(e, "Falha ao enviar digest de alertas ao usuario %s", userId);
+            }
         }
     }
 

@@ -26,4 +26,12 @@ public class VesselRepository implements PanacheRepositoryBase<Vessel, UUID> {
     public long countActiveByUser(UUID userId) {
         return count("userId = ?1 and deletedAt is null", userId);
     }
+
+    public List<Vessel> listAllActiveByUser(UUID userId) {
+        return find("userId = ?1 and deletedAt is null", Sort.by("createdAt").descending(), userId).list();
+    }
+
+    public void softDeleteByUser(UUID userId, java.time.Instant deletedAt) {
+        update("deletedAt = ?1 where userId = ?2 and deletedAt is null", deletedAt, userId);
+    }
 }

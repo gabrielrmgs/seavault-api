@@ -48,6 +48,9 @@ public class User {
     @Column(name = "terms_accepted_at")
     public Instant termsAcceptedAt;
 
+    @Column(name = "terms_version")
+    public String termsVersion;
+
     @Column(nullable = false)
     public String locale;
 

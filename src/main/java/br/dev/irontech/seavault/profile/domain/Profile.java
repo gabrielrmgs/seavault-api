@@ -1,6 +1,7 @@
 package br.dev.irontech.seavault.profile.domain;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
@@ -26,18 +27,22 @@ public class Profile {
     public String cir;
 
     @Column
+    @Convert(converter = br.dev.irontech.seavault.common.security.CryptoConverter.class)
     public String cpf;
 
     @Column
+    @Convert(converter = br.dev.irontech.seavault.common.security.CryptoConverter.class)
     public String rg;
 
     @Column
     public String nationality;
 
     @Column
+    @Convert(converter = br.dev.irontech.seavault.common.security.CryptoConverter.class)
     public String phone;
 
     @Column(name = "emergency_contact")
+    @Convert(converter = br.dev.irontech.seavault.common.security.CryptoConverter.class)
     public String emergencyContact;
 
     @Column(name = "category_id")

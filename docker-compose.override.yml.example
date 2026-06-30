@@ -1,0 +1,14 @@
+# Renomeie para docker-compose.override.yml para ativar Mailhog no dev local.
+services:
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  api:
+    environment:
+      QUARKUS_MAILER_HOST: mailhog
+      QUARKUS_MAILER_PORT: 1025
+      QUARKUS_MAILER_START_TLS: DISABLED
+      QUARKUS_MAILER_MOCK: "false"
